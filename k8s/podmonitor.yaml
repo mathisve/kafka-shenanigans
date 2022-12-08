@@ -1,0 +1,15 @@
+
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kafka
+  labels:
+    team: frontend
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: my-cluster
+      strimzi.io/pod-name: my-cluster-kafka-0
+  podMetricsEndpoints:
+  - port: tcp-prometheus
+    interval: 1s

@@ -1,4 +1,6 @@
-\# Kafka docker compose
+# Kafka docker compose
+
+Note: doesn't really work!
 
 ## Start
 ```docker compose up -d```

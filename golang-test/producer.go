@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -10,25 +11,29 @@ import (
 
 func main() {
 	// to produce messages
-	topic := "topic"
+	topic := "my-topic"
 	partition := 0
 
-	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", topic, partition)
+	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9094", topic, partition)
 	if err != nil {
 		log.Fatal("failed to dial leader:", err)
 	}
 
-	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	_, err = conn.WriteMessages(
-		kafka.Message{Value: []byte("one!")},
-		kafka.Message{Value: []byte("two!")},
-		kafka.Message{Value: []byte("three!")},
-	)
-	if err != nil {
-		log.Fatal("failed to write messages:", err)
-	}
+	var count = 0
 
-	if err := conn.Close(); err != nil {
-		log.Fatal("failed to close writer:", err)
+	for {
+		log.Println("Writing!")
+
+		conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		_, err = conn.WriteMessages(
+			kafka.Message{Key: []byte(string(count)), Value: []byte(strconv.Itoa(count))},
+		)
+		if err != nil {
+			log.Fatal("failed to write messages:", err)
+		}
+
+		count += 1
+		log.Println(count)
+		log.Println("Written!")
 	}
 }
