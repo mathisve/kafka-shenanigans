@@ -20,15 +20,16 @@ spec:
       transaction.state.log.replication.factor: 1
       transaction.state.log.min.isr: 1
       default.replication.factor: 1
+      log.retention.hours: -1
       min.insync.replicas: 1
-      inter.broker.protocol.version: "3.3"
+      inter.broker.protocol.version: "3.3.1"
     storage:
       type: jbod
       volumes:
       - id: 0
         type: persistent-claim
-        size: 10Gi
-        deleteClaim: false
+        size: 100Gi
+        deleteClaim: true
     metricsConfig:
       type: jmxPrometheusExporter
       valueFrom:
@@ -39,8 +40,8 @@ spec:
     replicas: 1
     storage:
       type: persistent-claim
-      size: 10Gi
-      deleteClaim: false
+      size: 100Gi
+      deleteClaim: true
   entityOperator:
     topicOperator: {}
     userOperator: {}

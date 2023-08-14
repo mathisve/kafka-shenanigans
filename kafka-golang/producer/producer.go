@@ -4,55 +4,90 @@ import (
 	"context"
 	"log"
 	"math/rand"
+    "encoding/json"
 	"time"
 
 	"github.com/segmentio/kafka-go"
+    "github.com/segmentio/kafka-go/sasl/plain"
+
+    "crypto/tls"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
+type Data struct {
+    Val string
+    Other string
+}
+
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func main() {
-	// mechanism, err := scram.Mechanism(scram.SHA256, "dG9sZXJhbnQtam9leS0xNDgwOSSDKmiUyPZXBYBlz2HdUFD8MZSCpWj0fFVqyms", "9wi3fI1PFncfW_Qzy60p0L3FYAKMp-_JcdIQYxa94rgh6c2Wskv0o0_j68a8ufUcAdtxdw==")
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
+//    mechanism, err := scram.Mechanism(scram.SHA256, "KVEYCR27L3665NSA", "bqQfTPtN5DZjSVCQl8GqFBzz7Dxd1QGdbEbaHNMEuuCGnNW5OpnTa1w335tJcTzs")
+//	if err != nil {
+//		panic(err)
+//	}
+
+    mechanism := plain.Mechanism{
+        Username: "KVEYCR27L3665NSA",
+        Password: "bqQfTPtN5DZjSVCQl8GqFBzz7Dxd1QGdbEbaHNMEuuCGnNW5OpnTa1w335tJcTzs",
+    }
 
 	dialer := &kafka.Dialer{
-		// SASLMechanism: mechanism,
-		// TLS: &tls.Config{},
+		Timeout:       10 * time.Second,
+		DualStack:     true,
+		SASLMechanism: mechanism,
+        TLS: &tls.Config{
+            MinVersion: tls.VersionTLS12,
+            }
 	}
 
 	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers: []string{"a39b9477d488b4ef28674629f378d71a-2079889692.us-east-1.elb.amazonaws.com:9092"},
-		Topic:   "my-topic",
+        Brokers: []string{"pkc-n00kk.us-east-1.aws.confluent.cloud:9092"},
+		Topic:   "topic_3",
 		Dialer:  dialer,
 	})
 
+    log.Println(w.Stats().ClientID)
+
 	var msg []kafka.Message
 
-    for {
-        log.Println("sending messages")
-        for i := 0; i < 10; i++ {
-            msg = append(msg, kafka.Message{
-                Value: []byte(RandStringRunes(10)),
-                Time:  time.Now(),
-                })
+	for {
+		log.Println("sending messages")
+		for i := 0; i < 100; i++ {
 
-            time.Sleep(time.Millisecond * 100)
-        }
+            d := Data {
+                Val: RandStringRunes(10),
+                Other: RandStringRunes(10),
+            }
 
-        ctx := context.Background()
-        err := w.WriteMessages(ctx, msg...)
-        if err != nil {
-            log.Println(err)
-        }
+            b, err := json.Marshal(d)
+            if err != nil {
+                log.Println(err)
+            }
 
-        log.Println(w.Stats().Messages)
-    }
+			msg = append(msg, kafka.Message{
+				Value: b,
+				Time:  time.Now(),
+			})
+
+			time.Sleep(time.Millisecond * 1)
+		}
+
+		ctx := context.Background()
+        log.Printf("Queued up messages: %d \n", len(msg))
+		err := w.WriteMessages(ctx, msg...)
+		if err != nil {
+            log.Println("writing messages:")
+			log.Println(err)
+		}
+
+        msg = []kafka.Message{}
+
+		log.Println(w.Stats().Messages)
+	}
 
 	//...
 	w.Close()
