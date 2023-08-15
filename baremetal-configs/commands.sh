@@ -1,9 +1,16 @@
 #!/bin/bash
 
-## JAVA
+########
+# JAVA #
+########
+
 sudo apt-get install openjdk-11-jre-headless
 
-## ZOOKEEPER
+
+#############
+# ZOOKEEPER #
+#############
+
 wget https://dlcdn.apache.org/zookeeper/zookeeper-3.9.0/apache-zookeeper-3.9.0-bin.tar.gz\
 sudo mkdir /usr/local/zookeeper
 sudo chown -R $(whoami) /usr/local/zookeeper
@@ -12,14 +19,18 @@ sudo tar \
     -C /usr/local/zookeeper/ \
     --strip-components=1
 
+# zookeeper config
 echo "tickTime=2000
 dataDir=/var/lib/zookeeper
 clientPort=2181 " >> /usr/local/zookeeper/conf/zoo.cfg
 
+# start zookeeper
 sudo /usr/local/zookeeper/bin/zkServer.sh start
 
 
-## KAFKA
+#########
+# KAFKA #
+#########
 
 wget https://downloads.apache.org/kafka/3.5.1/kafka_2.13-3.5.1.tgz
 sudo mkdir /usr/local/kafka
@@ -29,10 +40,15 @@ sudo tar \
     --strip-components=1
 
 sudo chown -R $(whoami) /usr/local/kafka
+
+# start kafka
 /usr/local/kafka/bin/kafka-server-start.sh -daemon /usr/local/kafka/config/server.properties
 
 
-## KAFKA TOPIC
+###############
+# KAFKA TOPIC #
+###############
+
 /usr/local/kafka/bin/kafka-topics.sh \
     --create \
     --topic mytopic \
@@ -40,11 +56,14 @@ sudo chown -R $(whoami) /usr/local/kafka
     --partitions 10
 
 
-## KAFKA CONNECT
+#################
+# KAFKA CONNECT #
+#################
 
 mkdir /usr/local/kafka/plugins /usr/local/kafka/plugins/camel-postgresql-sink-kafka-connector
 echo "plugin.path=/usr/local/kafka/plugins" >> /usr/local/kafka/config/connect-distributed.properties
 
+# download connector
 wget https://repo.maven.apache.org/maven2/org/apache/camel/kafkaconnector/camel-postgresql-sink-kafka-connector/3.18.2/camel-postgresql-sink-kafka-connector-3.18.2-package.tar.gz
 
 sudo tar \
@@ -52,13 +71,16 @@ sudo tar \
     -C /usr/local/kafka/plugins/camel-postgresql-sink-kafka-connector \
     --strip-components=1
 
+# download postgresql driver
 wget https://jdbc.postgresql.org/download/postgresql-42.6.0.jar
 mv postgresql-42.6.0.jar /usr/local/kafka/plugins/camel-postgresql-sink-kafka-connector
 
+# start kafka connect
 /usr/local/kafka/bin/connect-distributed.sh \
     -daemon \
     /usr/local/kafka/config/connect-distributed.properties
 
+# timescale-sink config
 echo '{
 	"name": "timescale-sink",
 	"config": {
@@ -78,13 +100,18 @@ echo '{
 	}
 }' > timescale-sink.properties
 
+# add timescale-sink connector
 cat timescale-sink.properties | curl -X POST -d @- http://localhost:8083/connectors -H "Content-Type: application/json"
 
+# validate if connector shows up
 curl -X GET https://localhost:8083/connectors
 
 
-## KAFKACAT
+############
+# KAFKACAT #
+############
 
 sudo apt-get install kafkacat
 
+#send message on topic
 echo '{"username":"Mathis","city":"Salt Lake City"}' | kafkacat -P -b localhost:9092 -t mytopic
